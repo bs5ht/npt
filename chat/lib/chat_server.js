@@ -30,11 +30,11 @@ exports.listen = function(server) {
 
 };
 
-function asssignGuestName(socket, guestNumber, nickNames, namesUsed) {
+function assignGuestName(socket, guestNumber, nickNames, namesUsed) {
 
 	var name = 'Guest'  + guestNumber;
 	nickNames[socket.id] = name;
-	socket.emit('nameREsult', {
+	socket.emit('nameResult', {
 		success: true, 
 		name: name
 	});
@@ -45,7 +45,7 @@ function asssignGuestName(socket, guestNumber, nickNames, namesUsed) {
 function joinRoom(socket, room){
 	socket.join(room)
 	currentRoom[socket.id] = room;
-	socket.emit('JoinResult', {room: room});
+	socket.emit('joinResult', {room: room});
 	socket.broadcast.to(room).emit('message', {
 		text:nickNames[socket.id] + 'has joined ' + room + '.'
 	});
@@ -67,7 +67,7 @@ function joinRoom(socket, room){
 	}
 }
 
-funciton handleNameChangeAttempts(socket, nickNames, namesUsed) {
+function handleNameChangeAttempts(socket, nickNames, namesUsed) {
 	socket.on('nameAttempt', function(name) {
 		if (name.indexOf('Guest') == 0) {
 			socket.emit('nameResult', {success: false,
@@ -98,4 +98,27 @@ funciton handleNameChangeAttempts(socket, nickNames, namesUsed) {
 			}
 		}
 	});	
+}
+
+function handleMessageBroadcasting(socket) {
+	socket.on('message', function (message) {
+		socket.broadcast.to(message.room).emit('message', {
+		text:nickNames[socket.id] + ": " + message.text
+		});
+	});
+}
+
+function handleRoomJoining(socket) {
+	socket.on('join', function(room) {
+		socket.leave(currentRoom[socket.id]);
+		joinRoom(socket, room.newRoom);
+	});
+}
+
+function handleClientDisconnection(socket) {
+	socket.on('disconnect', function() {
+		var nameIndex = namesUsed.indexOf(nickNames[socket.id]);
+		delete namesUsed[nameIndex];
+		delete nickNames[socket.id];
+	});
 }
